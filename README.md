@@ -22,12 +22,6 @@ They are ment to be used in webpages. They are not anti-aliased, but look really
 
 # Examples
 
-On Mac OS X, there is a little application you can drop your audio files into. The images are either saved in the same directory as the audio file (autosave checkbox) or can be drag'n'droped into photoshop (or what ever). You can select foreground and background colors and set the dimensions of the generated image.
-
-![DropletScreenshot](https://github.com/beschulz/wav2png/raw/master/examples/DropletScreenshot.png)
-
-The binary can be downloaded [here](http://goo.gl/8UCKd).
-
 You can supply a foreground and background color in rgba
 
 	wav2png --foreground-color=ffb400aa --background-color=2e4562ff -o ../examples/example0.png ../music.wav
@@ -116,8 +110,7 @@ If you have suggestions for performance improvements, please drop a line.
 # Installation
 
 ##
-	if you're using a Linux distributing, that supports apt-get or you're on OSX and have homebrew installed, you
-	might want to try:
+	if you're using a Linux distribution that supports apt-get, you can try:
 
 ```bash
 	cd build
@@ -127,28 +120,13 @@ If you have suggestions for performance improvements, please drop a line.
 ## On Linux (Ubuntu, Debian)
 
 ### install dependencies
-```apt-get install make g++ libsndfile1-dev libpng++-dev libpng12-dev libboost-program-options-dev```
+```apt-get install make g++ libsndfile1-dev libpng++-dev libpng-dev libboost-program-options-dev```
 
 ### Build
 ```bash
 	cd build
 	make all
 ```
-
-## On Max OS
-
-### install dependencies
-* Get the Xcode command line tools
-	* Starting with Xcode 4.3, Apple does not install command line tools by default anymore, so after Xcode installation, go to Preferences > Downloads > Components > Command Line Tools and click Install. You can also directly [download Command Line Tools](https://developer.apple.com/downloads) for Xcode without getting Xcode.
-* [Install homebrew](https://github.com/mxcl/homebrew/wiki/installation)
-* install libsndfile: in the shell: brew install libsndfile
-* install [png++](http://savannah.nongnu.org/projects/pngpp/)
-	* put the headers in dependencies/include, so that dependencies/include/png++/png.hpp can be found.
-	* alternatively, you can install it anywhere else, where the compiler can find it.
-
-### Build
-* either open build/macosx/wav2png.xcodeproj in Xcode to build it there, or
-* in the shell: cd build && make all
 
 ## On CentOS
 ```bash

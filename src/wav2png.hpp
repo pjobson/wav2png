@@ -1,11 +1,7 @@
 #include <sndfile.hh>
 #include <png++/png.hpp>
 
-#ifdef __OBJC__
-    typedef bool (^progress_callback_t)(int progress);
-#else /* __OBJC__ */
-    typedef bool (*progress_callback_t)(int progress);
-#endif /* __OBJC__ */
+typedef bool (*progress_callback_t)(int progress);
 
 void compute_waveform(
   const SndfileHandle& wav,
