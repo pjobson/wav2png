@@ -1,15 +1,149 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Profiling
+gmon.out
+*.profile
+
+# Core dumps
+core
+core.*
+
+# Build directories
+build/
+bin/
+!bin/.gitkeep
+*.build/
+cmake-build-*/
+
+# IDEs and Editors
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# CLion / IntelliJ IDEA
+.idea/
+cmake-build-*/
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+
+# Vim
+*.swp
+*.swo
+*~
+.*.swp
+
+# Emacs
+\#*\#
+.\#*
+
+# macOS
 .DS_Store
-Makefile~
-version.txt~
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Dependencies
+dependencies/include/png++
+
+# Generated files
 version.hpp
+src/version.hpp
+
+# Project-specific
+wav2png_profile
 bin/wav2png_profile
 *.wav
 *.wav.png
-dependencies/include/png++
-wav2pngDroplet.app
-.gitignore~
-icons/*.png
 music.wav
-tteesstt.png
 song.mp3
+tteesstt.png
 wav2png_batch_output
+wav2pngDroplet.app
+icons/*.png
+
+# Backup files
+*~
+*.bak
+*.backup
+Makefile~
+version.txt~
+.gitignore~
