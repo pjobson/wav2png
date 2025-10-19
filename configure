@@ -1,0 +1,326 @@
+#!/bin/bash
+
+# wav2png configure script
+# This script checks for dependencies and generates build configuration
+
+set -e
+
+# Default values
+PREFIX="${PREFIX:-/usr/local}"
+CXX="${CXX:-g++}"
+CXXFLAGS="${CXXFLAGS:--std=c++17 -O3 -Wall -Werror}"
+ENABLE_DEBUG="${ENABLE_DEBUG:-no}"
+ENABLE_PROFILING="${ENABLE_PROFILING:-no}"
+VERBOSE="${VERBOSE:-no}"
+
+# Color output
+if [ -t 1 ]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    NC='\033[0m'
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    NC=''
+fi
+
+# Helper functions
+print_success() {
+    echo -e "${GREEN}[OK]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_info() {
+    echo "  $1"
+}
+
+show_help() {
+    cat <<EOF
+wav2png configure script
+
+Usage: ./configure [options]
+
+Configuration options:
+  --prefix=DIR            Installation prefix (default: /usr/local)
+  --bindir=DIR            Binary installation directory (default: PREFIX/bin)
+
+Compiler options:
+  --cxx=COMPILER          C++ compiler to use (default: g++)
+  --cxxflags=FLAGS        Additional C++ compiler flags
+  --enable-debug          Build with debug symbols and no optimization
+  --enable-profiling      Build with profiling support (-pg)
+
+Dependency options:
+  --with-boost=DIR        Boost installation directory
+  --with-libpng=DIR       libpng installation directory
+  --with-libsndfile=DIR   libsndfile installation directory
+
+Other options:
+  --verbose               Enable verbose output during checks
+  --help                  Display this help message
+
+Environment variables:
+  CXX                     C++ compiler command
+  CXXFLAGS                C++ compiler flags
+  LDFLAGS                 Linker flags
+  PREFIX                  Installation prefix
+
+Examples:
+  ./configure
+  ./configure --prefix=/opt/wav2png --enable-debug
+  ./configure --cxx=clang++ --enable-profiling
+  CXX=g++-11 ./configure
+
+EOF
+}
+
+# Parse command line arguments
+for arg in "$@"; do
+    case "$arg" in
+        --help)
+            show_help
+            exit 0
+            ;;
+        --prefix=*)
+            PREFIX="${arg#*=}"
+            ;;
+        --bindir=*)
+            BINDIR="${arg#*=}"
+            ;;
+        --cxx=*)
+            CXX="${arg#*=}"
+            ;;
+        --cxxflags=*)
+            CXXFLAGS="${arg#*=}"
+            ;;
+        --enable-debug)
+            ENABLE_DEBUG=yes
+            ;;
+        --enable-profiling)
+            ENABLE_PROFILING=yes
+            ;;
+        --with-boost=*)
+            BOOST_DIR="${arg#*=}"
+            ;;
+        --with-libpng=*)
+            LIBPNG_DIR="${arg#*=}"
+            ;;
+        --with-libsndfile=*)
+            LIBSNDFILE_DIR="${arg#*=}"
+            ;;
+        --verbose)
+            VERBOSE=yes
+            ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Try './configure --help' for more information."
+            exit 1
+            ;;
+    esac
+done
+
+# Set bindir if not specified
+BINDIR="${BINDIR:-${PREFIX}/bin}"
+
+echo "Configuring wav2png..."
+echo ""
+
+# Check for C++ compiler
+echo -n "Checking for C++ compiler... "
+if ! command -v "$CXX" &> /dev/null; then
+    print_error "C++ compiler '$CXX' not found"
+    exit 1
+fi
+print_success "$CXX"
+
+# Check C++17 support
+echo -n "Checking for C++17 support... "
+cat > conftest.cpp <<EOF
+#include <algorithm>
+#include <vector>
+int main() {
+    std::vector<int> v = {1, 2, 3};
+    auto result = std::clamp(2, 1, 3);
+    return 0;
+}
+EOF
+
+if $CXX -std=c++17 -c conftest.cpp -o conftest.o &> /dev/null; then
+    print_success "yes"
+    rm -f conftest.cpp conftest.o
+else
+    print_error "C++17 support not available"
+    rm -f conftest.cpp conftest.o
+    exit 1
+fi
+
+# Check for pkg-config
+echo -n "Checking for pkg-config... "
+if ! command -v pkg-config &> /dev/null; then
+    print_warning "not found (will use manual detection)"
+    HAS_PKGCONFIG=no
+else
+    print_success "$(pkg-config --version)"
+    HAS_PKGCONFIG=yes
+fi
+
+# Check for libpng
+echo -n "Checking for libpng... "
+if [ "$HAS_PKGCONFIG" = "yes" ]; then
+    if pkg-config --exists libpng; then
+        LIBPNG_VERSION=$(pkg-config --modversion libpng)
+        LIBPNG_CFLAGS=$(pkg-config --cflags libpng)
+        LIBPNG_LIBS=$(pkg-config --libs libpng)
+        print_success "version $LIBPNG_VERSION"
+    else
+        print_error "not found via pkg-config"
+        exit 1
+    fi
+else
+    if command -v libpng-config &> /dev/null; then
+        LIBPNG_VERSION=$(libpng-config --version)
+        LIBPNG_CFLAGS=$(libpng-config --cflags)
+        LIBPNG_LIBS=$(libpng-config --ldflags)
+        print_success "version $LIBPNG_VERSION"
+    else
+        print_error "libpng-config not found"
+        exit 1
+    fi
+fi
+
+# Check for libsndfile
+echo -n "Checking for libsndfile... "
+if [ "$HAS_PKGCONFIG" = "yes" ]; then
+    if pkg-config --exists sndfile; then
+        SNDFILE_VERSION=$(pkg-config --modversion sndfile)
+        SNDFILE_CFLAGS=$(pkg-config --cflags sndfile)
+        SNDFILE_LIBS=$(pkg-config --libs sndfile)
+        print_success "version $SNDFILE_VERSION"
+    else
+        print_error "not found via pkg-config"
+        exit 1
+    fi
+else
+    SNDFILE_LIBS="-lsndfile"
+    print_warning "assuming -lsndfile"
+fi
+
+# Check for Boost program_options
+echo -n "Checking for Boost program_options... "
+cat > conftest.cpp <<EOF
+#include <boost/program_options.hpp>
+int main() {
+    boost::program_options::options_description desc;
+    return 0;
+}
+EOF
+
+if $CXX -std=c++17 -c conftest.cpp -o conftest.o &> /dev/null; then
+    print_success "yes"
+    BOOST_LIBS="-lboost_program_options"
+    rm -f conftest.cpp conftest.o
+else
+    print_error "Boost program_options not found"
+    rm -f conftest.cpp conftest.o
+    exit 1
+fi
+
+# Check for png++
+echo -n "Checking for png++ headers... "
+cat > conftest.cpp <<EOF
+#include <png++/png.hpp>
+int main() {
+    png::image<png::rgba_pixel> img(100, 100);
+    return 0;
+}
+EOF
+
+PNGPP_INCLUDES=""
+if $CXX -std=c++17 -c conftest.cpp -o conftest.o $LIBPNG_CFLAGS &> /dev/null; then
+    print_success "yes"
+    rm -f conftest.cpp conftest.o
+elif $CXX -std=c++17 -Idependencies/include -c conftest.cpp -o conftest.o $LIBPNG_CFLAGS &> /dev/null; then
+    print_success "yes (in dependencies/include)"
+    PNGPP_INCLUDES="-Idependencies/include"
+    rm -f conftest.cpp conftest.o
+else
+    print_error "png++ headers not found"
+    print_info "Install png++ or place headers in dependencies/include/"
+    rm -f conftest.cpp conftest.o
+    exit 1
+fi
+
+# Adjust flags for debug build
+if [ "$ENABLE_DEBUG" = "yes" ]; then
+    CXXFLAGS="-std=c++17 -g -O0 -Wall"
+    print_info "Debug mode enabled"
+fi
+
+# Add profiling flags
+if [ "$ENABLE_PROFILING" = "yes" ]; then
+    CXXFLAGS="$CXXFLAGS -pg"
+    LDFLAGS="$LDFLAGS -pg"
+    print_info "Profiling enabled"
+fi
+
+# Generate config.mk
+echo ""
+echo "Generating build configuration..."
+
+cat > config.mk <<EOF
+# Generated by configure script
+# Do not edit manually - run ./configure to regenerate
+
+PREFIX = $PREFIX
+BINDIR = $BINDIR
+
+CXX = $CXX
+CXXFLAGS = $CXXFLAGS
+LDFLAGS = $LDFLAGS
+
+PNGPP_INCLUDES = $PNGPP_INCLUDES
+LIBPNG_CFLAGS = $LIBPNG_CFLAGS
+LIBPNG_LIBS = $LIBPNG_LIBS
+SNDFILE_CFLAGS = $SNDFILE_CFLAGS
+SNDFILE_LIBS = $SNDFILE_LIBS
+BOOST_LIBS = $BOOST_LIBS
+
+ENABLE_DEBUG = $ENABLE_DEBUG
+ENABLE_PROFILING = $ENABLE_PROFILING
+EOF
+
+# Generate summary
+echo ""
+echo "Configuration Summary"
+echo "====================="
+echo ""
+echo "Installation:"
+echo "  prefix:           $PREFIX"
+echo "  bindir:           $BINDIR"
+echo ""
+echo "Compiler:"
+echo "  CXX:              $CXX"
+echo "  CXXFLAGS:         $CXXFLAGS"
+echo "  LDFLAGS:          $LDFLAGS"
+echo ""
+echo "Dependencies:"
+echo "  libpng:           $LIBPNG_VERSION"
+echo "  libsndfile:       $SNDFILE_VERSION"
+echo "  Boost:            detected"
+echo "  png++:            detected"
+echo ""
+echo "Options:"
+echo "  Debug build:      $ENABLE_DEBUG"
+echo "  Profiling:        $ENABLE_PROFILING"
+echo ""
+echo "Configuration complete. Run 'make' to build."
+echo ""

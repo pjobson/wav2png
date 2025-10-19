@@ -44,14 +44,31 @@ Install dependencies:
 
 Build:
 
-    cd build
     make all
+
+### Using Configure Script (Recommended)
+
+The configure script automatically detects dependencies and generates optimized build settings:
+
+    ./configure
+    make
+    sudo make install
+
+Configure options:
+
+    ./configure --prefix=/opt/wav2png    # Custom installation directory
+    ./configure --enable-debug           # Debug build with symbols
+    ./configure --enable-profiling       # Build with profiling support
+    ./configure --cxx=clang++           # Use different compiler
+
+For all options:
+
+    ./configure --help
 
 ### Automated Installation
 
 If your Linux distribution supports apt-get:
 
-    cd build
     make install_dependencies
     make all
 

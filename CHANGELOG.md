@@ -18,11 +18,17 @@ All notable changes to wav2png are documented in this file.
 * Enhanced error handling with comprehensive exception handling in main
 * Replaced header guards with pragma once directives
 * Updated Makefile to use C++17 compiler flags
+* Moved build system to project root (build/ directory removed)
+* Simplified build process - now run make from project root
 
 ### Added
 
 * Comprehensive .gitignore for C/C++ development
 * CHANGELOG.md file
+* TODO.md with community-driven feature suggestions
+* Configure script for automatic dependency detection and build configuration
+* Install and uninstall targets in Makefile
+* Help target in Makefile for listing available build targets
 * C++17 standard library features (std::clamp, constexpr, auto, etc.)
 * std::function for flexible callback mechanism
 * Anonymous namespaces for better code organization

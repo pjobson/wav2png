@@ -47,11 +47,11 @@ core
 core.*
 
 # Build directories
-build/
 bin/
 !bin/.gitkeep
 *.build/
 cmake-build-*/
+build/
 
 # IDEs and Editors
 # Visual Studio
