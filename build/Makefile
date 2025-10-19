@@ -7,6 +7,7 @@ INCLUDES=-I../dependencies/include
 
 LD_PLATFORM_FLAGS=-lboost_program_options `libpng-config --ldflags` -lsndfile
 CC=g++
+CXXFLAGS=-std=c++17 -O3 -Wall -Werror
 
 all: $(BINARY)
 
@@ -25,8 +26,7 @@ $(SRC)/version.hpp: Makefile version.txt
 $(BINARY): $(SRC)/*.cpp $(SRC)/*.hpp $(SRC)/version.hpp
 	mkdir -p `dirname $(BINARY)`
 	echo $(INCLUDES)
-	# -Wno-unused-local-typedefs
-	$(CC) -O3 -Wall -Werror $(SRC)/*.cpp $(INCLUDES) $(LD_PLATFORM_FLAGS) -o $(BINARY)
+	$(CC) $(CXXFLAGS) $(SRC)/*.cpp $(INCLUDES) $(LD_PLATFORM_FLAGS) -o $(BINARY)
 
 clean:
 	rm -f $(BINARY)
@@ -34,7 +34,7 @@ clean:
 	rm -f $(SRC)/version.hpp
 
 profile:
-	$(CC) -O3 -Wall -Werror $(SRC)/*.cpp $(INCLUDES) $(LD_PLATFORM_FLAGS) -o $(BINARY)_profile -g -pg
+	$(CC) $(CXXFLAGS) $(SRC)/*.cpp $(INCLUDES) $(LD_PLATFORM_FLAGS) -o $(BINARY)_profile -g -pg
 	$(BINARY)_profile baked.wav
 	gprof $(BINARY)_profile|less
 

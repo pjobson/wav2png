@@ -1,211 +1,218 @@
 #include "wav2png.hpp"
 
-#include <math.h>
-#include <iostream>
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
+#include <cmath>
+#include <iostream>
+#include <vector>
 #include <sndfile.hh>
 #include <png++/png.hpp>
 
-/*
-  clamp x into range [min...max]
-*/
+namespace {
+
+// Template metaprogramming to get value range of sample format T
 template <typename T>
-const T& clamp(const T& x, const T& min, const T& max)
-{
-  return std::max(min, std::min(max, x));
-}
+struct sample_scale {};
 
-/*
-  metaprogramming functions to get value range of sample format T.
-*/
-template <typename T> struct sample_scale {};
-
-template <> struct sample_scale<short>
-{
-  static const unsigned short value = 1 << (sizeof(short)*8-1);
+template <>
+struct sample_scale<short> {
+    static constexpr unsigned short value = 1 << (sizeof(short) * 8 - 1);
 };
 
-template <> struct sample_scale<float>
-{
-  static const int value = 1;
+template <>
+struct sample_scale<float> {
+    static constexpr int value = 1;
 };
 
-/*
-  conversion from and to dB
-*/
-float float2db(float x)
-{
-  x = fabs(x);
-
-  if (x > 0.0f)
-    return 20.0f * log10( x );
-  else
-    return -9999.9f;
+// Convert linear amplitude to decibels
+inline float float2db(float x) noexcept {
+    x = std::abs(x);
+    return (x > 0.0f) ? 20.0f * std::log10(x) : -9999.9f;
 }
 
-float db2float(float x)
-{
-  return pow(10.0, x/20.f);
+// Convert decibels to linear amplitude
+inline float db2float(float x) noexcept {
+    return std::pow(10.0f, x / 20.0f);
 }
 
-/*
-  map value x in range [in_min...in_max] into range [out_min...out_max]
-*/
-float map2range(float x, float in_min, float in_max, float out_min, float out_max)
-{
-  return clamp<float>(
-    out_min + (out_max-out_min)*(x-in_min)/(in_max-in_min),
-    out_min,
-    out_max
-  );
+// Map value x from range [in_min...in_max] to range [out_min...out_max]
+inline float map2range(float x, float in_min, float in_max, float out_min, float out_max) noexcept {
+    const float mapped = out_min + (out_max - out_min) * (x - in_min) / (in_max - in_min);
+    return std::clamp(mapped, out_min, out_max);
 }
 
+// Draw a vertical-ish line for line-only mode
+void draw_vertish_line(
+    png::image<png::rgba_pixel>& image,
+    int x0,
+    int y0,
+    int y1,
+    const png::rgba_pixel& color
+) {
+    const int ydiff = y1 - y0;
+    const int abs_ydiff = std::abs(ydiff);
+    const int sign = (ydiff == 0) ? 0 : (ydiff / abs_ydiff);
 
-void draw_vertish_line(png::image< png::rgba_pixel >& image, int x0, int y0, int y1, const png::rgba_pixel& color) {
-  int ydiff = y1 - y0;  // Could be +ve or -ve
-  int abs_ydiff = abs(ydiff);
-  int sign = ydiff == 0 ? 0 : (ydiff / abs_ydiff);      // -1, 0, +1
-  for (int dy = 0; dy <= abs_ydiff; dy++) {
-    int y = y0 + (sign * dy);
-    if (dy < abs_ydiff/2) {
-      image.set_pixel(x0, y, color);
+    for (int dy = 0; dy <= abs_ydiff; ++dy) {
+        const int y = y0 + (sign * dy);
+        const int x = (dy < abs_ydiff / 2) ? x0 : x0 + 1;
+        image.set_pixel(x, y, color);
     }
-    else {
-      image.set_pixel(x0+1, y, color);
-    }
-  }
 }
 
-/*
-  compute the waveform of the supplied audio-file and store it into out_image.
-*/
+} // anonymous namespace
+
 void compute_waveform(
-  const SndfileHandle& wav,
-  png::image< png::rgba_pixel >& out_image,
-  const png::rgba_pixel& bg_color,
-  const png::rgba_pixel& fg_color,
-  bool use_db_scale,
-  float db_min,
-  float db_max,
-  bool line_only,
-  progress_callback_t progress_callback
-)
-{
-  using std::size_t;
-  using std::cerr;
-  using std::endl;
+    const SndfileHandle& wav,
+    png::image<png::rgba_pixel>& out_image,
+    const png::rgba_pixel& bg_color,
+    const png::rgba_pixel& fg_color,
+    bool use_db_scale,
+    float db_min,
+    float db_max,
+    bool line_only,
+    progress_callback_t progress_callback
+) {
+    using std::size_t;
 
-  const unsigned h = out_image.get_height();
+    const auto h = out_image.get_height();
 
-  // you can change it to float or short, short was much faster for me.
-  typedef short sample_type;
+    // Using short samples for performance
+    using sample_type = short;
 
-  //there might not be enough samples, in this case, we're using a smaller image and scale it up later.
-  png::image< png::rgba_pixel > small_image;
-  bool not_enough_samples = wav.frames() < (sf_count_t)out_image.get_width();
+    // Handle cases where there aren't enough samples
+    png::image<png::rgba_pixel> small_image;
+    const bool not_enough_samples = wav.frames() < static_cast<sf_count_t>(out_image.get_width());
 
-  if (not_enough_samples)
-    small_image = png::image< png::rgba_pixel >( wav.frames()>0?wav.frames():1, out_image.get_height() );
-
-  png::image< png::rgba_pixel >& image = not_enough_samples?small_image:out_image;
-
-  assert(image.get_width() > 0);
-
-  int frames_per_pixel  = std::max<int>(1, wav.frames() / image.get_width());
-  int samples_per_pixel = wav.channels() * frames_per_pixel;
-  std::size_t progress_divisor = std::max<std::size_t>(1, image.get_width()/100);
-
-  // temp buffer for samples from audio file
-  std::vector<sample_type> block(samples_per_pixel);
-
-  /*
-    the processing works like this:
-    for each vertical pixel in the image (x), read frames_per_pixel frames from
-    the audio file and find the min and max values.
-  */
-  size_t y_median_last = 0;
-  for (size_t x = 0; x < image.get_width(); ++x)
-  {
-    // read frames
-    sf_count_t n = const_cast<SndfileHandle&>(wav).readf(&block[0], frames_per_pixel) * wav.channels();
-    assert(n <= (sf_count_t)block.size());
-
-    // find min and max
-    sample_type min(0);
-    sample_type max(0);
-    for (int i=0; i<n; i+=1)//wav.channels()) // only left channel
-    {
-      min = std::min( min, block[i] );
-      max = std::max( max, block[i] );
+    if (not_enough_samples) {
+        const auto frames = std::max<sf_count_t>(1, wav.frames());
+        small_image = png::image<png::rgba_pixel>(frames, out_image.get_height());
     }
-    std::nth_element(block.begin(), block.begin() + block.size()/2, block.end());
-    sample_type median = block[n/2];
-//    printf("min %d med %d max %d\n", min, median, max);
 
-    // compute "span" from top of image to min
-    float y1_ = use_db_scale?
-      h/2 - map2range( float2db(min / (float)sample_scale<sample_type>::value ), db_min, db_max, 0, h/2):
-      map2range( min, -sample_scale<sample_type>::value, 0, 0, h/2);
-    assert(0 <= y1_ && y1_ <= h/2);
-    size_t y1 = (size_t)y1_;
+    auto& image = not_enough_samples ? small_image : out_image;
+    assert(image.get_width() > 0);
 
-    // compute "span" from max to bottom of image
-    float y2_ = use_db_scale?
-      h/2 + map2range( float2db(max / (float)sample_scale<sample_type>::value ), db_min, db_max, 0, h/2):
-      map2range( max, 0, sample_scale<sample_type>::value, h/2, h);
-    assert(h/2 <= y2_ && y2_ <= h);
-    size_t y2 = (float)y2_;
-    
-    float y_median_ = use_db_scale?
-      h/2 + map2range( float2db(median / (float)sample_scale<sample_type>::value ), db_min, db_max, 0, h/2):
-      map2range( median, -sample_scale<sample_type>::value, sample_scale<sample_type>::value, 0, h);
-    size_t y_median = (float)y_median_;
-    //printf("ymin %ld ymed %ld ymax %ld\n", y1, y_median, y2);
+    const int frames_per_pixel = std::max(1, static_cast<int>(wav.frames() / image.get_width()));
+    const int samples_per_pixel = wav.channels() * frames_per_pixel;
+    const size_t progress_divisor = std::max<size_t>(1, image.get_width() / 100);
 
-    if (line_only) {
-      for(size_t y=0; y<h;++y) {
-        image.set_pixel(x, y, bg_color);
-      }
-      if (x != 0) {
-        draw_vertish_line(image, x-1, y_median_last, y_median, fg_color);
-      }
-      y_median_last = y_median;
+    // Buffer for samples from audio file
+    std::vector<sample_type> block(samples_per_pixel);
+
+    size_t y_median_last = 0;
+
+    for (size_t x = 0; x < image.get_width(); ++x) {
+        // Read frames from audio file
+        auto& wav_mut = const_cast<SndfileHandle&>(wav);
+        const sf_count_t n = wav_mut.readf(block.data(), frames_per_pixel) * wav.channels();
+        assert(n <= static_cast<sf_count_t>(block.size()));
+
+        // Find min and max values
+        sample_type min_val = 0;
+        sample_type max_val = 0;
+
+        for (int i = 0; i < n; ++i) {
+            min_val = std::min(min_val, block[i]);
+            max_val = std::max(max_val, block[i]);
+        }
+
+        // Calculate median
+        std::nth_element(block.begin(), block.begin() + block.size() / 2, block.end());
+        const sample_type median = block[n / 2];
+
+        // Compute y-coordinates for waveform
+        const float y1_float = use_db_scale
+            ? h / 2 - map2range(
+                float2db(min_val / static_cast<float>(sample_scale<sample_type>::value)),
+                db_min, db_max, 0.0f, h / 2.0f
+            )
+            : map2range(
+                min_val,
+                -static_cast<float>(sample_scale<sample_type>::value),
+                0.0f, 0.0f, h / 2.0f
+            );
+
+        assert(y1_float >= 0 && y1_float <= h / 2);
+        const size_t y1 = static_cast<size_t>(y1_float);
+
+        const float y2_float = use_db_scale
+            ? h / 2 + map2range(
+                float2db(max_val / static_cast<float>(sample_scale<sample_type>::value)),
+                db_min, db_max, 0.0f, h / 2.0f
+            )
+            : map2range(
+                max_val,
+                0.0f,
+                static_cast<float>(sample_scale<sample_type>::value),
+                h / 2.0f, static_cast<float>(h)
+            );
+
+        assert(y2_float >= h / 2 && y2_float <= h);
+        const size_t y2 = static_cast<size_t>(y2_float);
+
+        const float y_median_float = use_db_scale
+            ? h / 2 + map2range(
+                float2db(median / static_cast<float>(sample_scale<sample_type>::value)),
+                db_min, db_max, 0.0f, h / 2.0f
+            )
+            : map2range(
+                median,
+                -static_cast<float>(sample_scale<sample_type>::value),
+                static_cast<float>(sample_scale<sample_type>::value),
+                0.0f, static_cast<float>(h)
+            );
+
+        const size_t y_median = static_cast<size_t>(y_median_float);
+
+        if (line_only) {
+            // Fill background
+            for (size_t y = 0; y < h; ++y) {
+                image.set_pixel(x, y, bg_color);
+            }
+
+            // Draw line connecting median points
+            if (x != 0) {
+                draw_vertish_line(image, x - 1, y_median_last, y_median, fg_color);
+            }
+            y_median_last = y_median;
+        } else {
+            // Fill top background
+            for (size_t y = 0; y < y1; ++y) {
+                image.set_pixel(x, y, bg_color);
+            }
+
+            // Fill waveform
+            for (size_t y = y1; y < y2; ++y) {
+                image.set_pixel(x, y, fg_color);
+            }
+
+            // Fill bottom background
+            for (size_t y = y2; y < h; ++y) {
+                image.set_pixel(x, y, bg_color);
+            }
+        }
+
+        // Report progress
+        if (x % progress_divisor == 0) {
+            if (progress_callback && !progress_callback(100 * x / image.get_width())) {
+                return;
+            }
+        }
     }
-    else {
-      // fill span top to min
-      for(size_t y=0; y<y1;++y)
-        image.set_pixel(x, y, bg_color);
 
-      // fill span min to max
-      for(size_t y=y1; y<y2;++y)
-        image.set_pixel(x, y, fg_color);
-
-      // fill span max to bottom
-      for(size_t y = y2; y<h; ++y)
-        image.set_pixel(x, y, bg_color);
-    }
-    
-    // print progress
-    if ( x%(progress_divisor) == 0 )
-    {
-      if ( progress_callback && !progress_callback( 100*x/image.get_width() ) )
-          return;
-    }
-  }
-  
-    if ( progress_callback && !progress_callback( 100 ) )
+    // Final progress report
+    if (progress_callback && !progress_callback(100)) {
         return;
+    }
 
-  // upscale the generated image (nearest neighbour)
-  if (not_enough_samples)
-  {
-    for (std::size_t y=0; y<out_image.get_height(); ++y)
-      for(std::size_t x=0; x<out_image.get_width(); ++x)
-      {
-        std::size_t xx = x*small_image.get_width()/out_image.get_width();
-        assert( xx < out_image.get_width() );
-        out_image[y][x] = small_image[y][xx];
-      }
-  }
+    // Upscale small image if necessary (nearest neighbor)
+    if (not_enough_samples) {
+        for (size_t y = 0; y < out_image.get_height(); ++y) {
+            for (size_t x = 0; x < out_image.get_width(); ++x) {
+                const size_t xx = x * small_image.get_width() / out_image.get_width();
+                assert(xx < out_image.get_width());
+                out_image[y][x] = small_image[y][xx];
+            }
+        }
+    }
 }
