@@ -12,11 +12,22 @@ All notable changes to wav2png are documented in this file.
 * Simplified Makefile to Linux-only builds
 * Updated README.md with recent changes documentation
 * Converted README.md to use only Daring Fireball Markdown specification
+* Modernized entire codebase to C++17 standard
+* Refactored all source files with modern C++ idioms and best practices
+* Improved code safety with noexcept specifications and const correctness
+* Enhanced error handling with comprehensive exception handling in main
+* Replaced header guards with pragma once directives
+* Updated Makefile to use C++17 compiler flags
 
 ### Added
 
 * Comprehensive .gitignore for C/C++ development
 * CHANGELOG.md file
+* C++17 standard library features (std::clamp, constexpr, auto, etc.)
+* std::function for flexible callback mechanism
+* Anonymous namespaces for better code organization
+* Static analysis friendly constructs (explicit, noexcept)
+* Comprehensive code documentation and comments
 
 ### Removed
 
@@ -24,6 +35,22 @@ All notable changes to wav2png are documented in this file.
 * Xcode project files
 * Objective-C code and macOS droplet application
 * Platform-specific build conditionals
+* C-style casts (replaced with static_cast)
+* C-style headers (replaced with C++ equivalents)
+* Old-style typedef declarations
+* Legacy exception specifications (throw())
+* Custom clamp implementation (using std::clamp)
+
+### Technical Improvements
+
+* Replaced fabs with std::abs
+* Changed typedef to using alias declarations
+* Added constexpr to compile-time constants
+* Improved type safety with static_cast
+* Used .data() method instead of &vector[0]
+* Better structured conditional expressions
+* Extracted helper methods for better modularity
+* Fixed typos in user-facing messages
 
 ## Previous History - Benjamin Schulz (Original Author)
 

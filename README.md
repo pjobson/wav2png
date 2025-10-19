@@ -55,18 +55,6 @@ If your Linux distribution supports apt-get:
     make install_dependencies
     make all
 
-### CentOS/RHEL
-
-    yum install libsndfile-devel boost-devel libpng-devel gcc-c++
-    cd wav2png/dependencies/include
-    wget http://download.savannah.gnu.org/releases/pngpp/png++-0.2.5.tar.gz
-    tar zxvf png++-0.2.5.tar.gz && rm png++-0.2.5.tar.gz
-    mv png++-0.2.5 png++
-    cd ../../build
-    make
-
-Note: You may need to remove `-Werror` from the Makefile if you encounter warnings treated as errors.
-
 ## Usage
 
 Basic usage:
@@ -207,7 +195,7 @@ If you have suggestions for performance improvements or find issues, please open
 * John Berthels - Bug fixes
 * Additional contributors via merged pull requests
 
-See CHANGELOG.md for detailed version history.
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
 ## Support
 
