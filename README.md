@@ -113,25 +113,25 @@ Get help:
 
 ### Basic Waveform
 
-Foreground and background colors in RGBA:
+Foreground and background colors (supports both RGB and RGBA formats):
 
-    wav2png --foreground-color=ffb400aa --background-color=2e4562ff -o output.png input.wav
+    wav2png --foreground-color=ffb400 --background-color=2e4562 -o output.png input.wav
 
 ![example0](https://github.com/beschulz/wav2png/raw/master/examples/example0.png)
 
 ### Transparent Waveform
 
-Transparent waveform with solid background:
+Transparent waveform with solid background (using RGBA with alpha=00 for transparency):
 
-    wav2png --foreground-color=00000000 --background-color=2e4562ff -o output.png input.wav
+    wav2png --foreground-color=00000000 --background-color=2e4562 -o output.png input.wav
 
 ![example2](https://github.com/beschulz/wav2png/raw/master/examples/example2.png)
 
 ### Solid Waveform on Transparent Background
 
-Useful for overlaying on other images:
+Useful for overlaying on other images (transparent background using alpha=00):
 
-    wav2png --foreground-color=2e4562ff --background-color=00000000 -o output.png input.wav
+    wav2png --foreground-color=2e4562 --background-color=00000000 -o output.png input.wav
 
 ![example3](https://github.com/beschulz/wav2png/raw/master/examples/example3.png)
 
@@ -139,7 +139,7 @@ Useful for overlaying on other images:
 
 wav2png handles short audio samples gracefully:
 
-    wav2png --foreground-color=2e4562ff --background-color=00000000 -o output.png short.wav
+    wav2png --foreground-color=2e4562 --background-color=00000000 -o output.png short.wav
 
 ![example4](https://github.com/beschulz/wav2png/raw/master/examples/example4.png)
 
@@ -147,7 +147,7 @@ wav2png handles short audio samples gracefully:
 
 Use logarithmic scale for better visualization:
 
-    wav2png --foreground-color=ffb400aa --background-color=2e4562ff -d -o output.png input.wav
+    wav2png --foreground-color=ffb400 --background-color=2e4562 -d -o output.png input.wav
 
 ![example7](https://github.com/beschulz/wav2png/raw/master/examples/example7.png)
 
@@ -155,7 +155,7 @@ Use logarithmic scale for better visualization:
 
 Specify minimum and maximum dB values:
 
-    wav2png --foreground-color=ffb400aa --background-color=2e4562ff -d --db-min -40 --db-max 3 -o output.png input.wav
+    wav2png --foreground-color=ffb400 --background-color=2e4562 -d --db-min -40 --db-max 3 -o output.png input.wav
 
 ![example8](https://github.com/beschulz/wav2png/raw/master/examples/example8.png)
 
@@ -164,23 +164,34 @@ Specify minimum and maximum dB values:
 With ffmpeg installed, wav2png automatically handles MP3, M4A, AAC, and other formats:
 
     wav2png song.mp3 -o output.png
-    wav2png podcast.m4a --foreground-color=2e4562ff -o output.png
+    wav2png podcast.m4a --foreground-color=2e4562 -o output.png
 
 No additional flags needed - conversion happens automatically!
 
 ## Color Format
 
-Colors are specified in RGBA hexadecimal format: `rrggbbaa`
+Colors can be specified in two hex formats:
 
-**Examples:**
+* **RRGGBB** - 6 characters (assumes full opacity)
+* **RRGGBBAA** - 8 characters (with alpha transparency)
 
-* `ff0000ff` - 100% red, 100% opaque
-* `ff00007f` - 100% red, 50% opaque
-* `00ff00ff` - 100% green, 100% opaque
-* `0000ffff` - 100% blue, 100% opaque
+**RGB Examples (6 chars - fully opaque):**
+
+* `ff0000` - Red
+* `00ff00` - Green
+* `0000ff` - Blue
+* `2e4562` - Dark blue-gray
+* `ffffff` - White
+
+**RGBA Examples (8 chars - with transparency):**
+
+* `ff0000ff` - Red, 100% opaque
+* `ff00007f` - Red, 50% opaque
+* `00ff00ff` - Green, 100% opaque
 * `ffffff00` - White, fully transparent
+* `2e456280` - Dark blue-gray, 50% opaque
 
-**Tip:** Use Photoshop or an online color picker to get RGB values, then add the alpha channel value (00-ff for 0-100% opacity).
+**Tip:** Use Photoshop or an online color picker to get RGB values. For simple solid colors, use the 6-character format. For transparency effects, use the 8-character RGBA format with the alpha channel value (00=transparent, ff=opaque).
 
 ## Performance
 

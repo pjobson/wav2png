@@ -2,6 +2,31 @@
 
 All notable changes to wav2png are documented in this file.
 
+## [0.9] - 2025-10-20
+
+### Added
+
+*   **Extended audio format support** - Automatic conversion via ffmpeg for 100+ formats including MP3, M4A, AAC, WMA, and more
+*   **Flexible color specification** - Support for both 6-character RGB (`ff0000`) and 8-character RGBA (`ff0000ff`) hex color formats
+*   **Automatic format detection** - Seamlessly falls back to ffmpeg when libsndfile cannot read a format
+*   New `audio_converter` module for transparent format conversion
+*   FIFO-based audio streaming for efficient memory usage during conversion
+
+### Changed
+
+*   Default color format now accepts simplified 6-character RGB values (automatically appends `ff` for full opacity)
+*   Updated all documentation examples to use simpler RGB format where transparency is not needed
+*   Improved error messages for color parsing to indicate both supported formats
+*   Modified default foreground and background colors to use 6-character format (`000000` and `efefef`)
+
+### Technical Details
+
+*   Implemented FFmpegConverter class with FIFO pipe handling
+*   Added automatic ffmpeg availability detection
+*   Enhanced color parser to handle both RGB and RGBA formats
+*   No temporary files created during audio conversion (uses named pipes)
+*   Graceful degradation when ffmpeg is not installed
+
 ## [Unreleased] - 2025-10-18
 
 ### Changed
