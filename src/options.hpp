@@ -26,10 +26,10 @@ public:
                 "width of generated image")
             ("height,h", po::value<unsigned>(&height)->default_value(280),
                 "height of generated image")
-            ("background-color,b", po::value<std::string>(&background_color_string)->default_value("efefefff"),
-                "color of background in hex rgba")
-            ("foreground-color,f", po::value<std::string>(&foreground_color_string)->default_value("00000000"),
-                "color of foreground in hex rgba")
+            ("background-color,b", po::value<std::string>(&background_color_string)->default_value("efefef"),
+                "color of background in hex (RRGGBB or RRGGBBAA)")
+            ("foreground-color,f", po::value<std::string>(&foreground_color_string)->default_value("000000"),
+                "color of foreground in hex (RRGGBB or RRGGBBAA)")
             ("output,o", po::value<std::string>(&output_file_name)->default_value(""),
                 "name of output file, defaults to <name of inputfile>.png")
             ("config-file,c", po::value<std::string>(&config_file_name)->default_value("wav2png.cfg"),
@@ -165,13 +165,20 @@ private:
     };
 
     static png::rgba_pixel parse_color(const std::string& str) {
-        if (str.length() != 8) {
+        std::string color_str = str;
+
+        // Accept both RRGGBB (6 chars) and RRGGBBAA (8 chars)
+        if (color_str.length() == 6) {
+            // Append FF for full opacity
+            color_str += "ff";
+        } else if (color_str.length() != 8) {
             throw color_parse_error(
-                "supplied color does not have four components. try e.g. aabbccff"
+                "color must be 6 (RRGGBB) or 8 (RRGGBBAA) hex characters. "
+                "Examples: ff0000 or ff0000ff"
             );
         }
 
-        std::stringstream ss(str);
+        std::stringstream ss(color_str);
         unsigned color = 0;
         ss >> std::hex >> color;
 
