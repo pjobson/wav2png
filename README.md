@@ -14,7 +14,9 @@ wav2png generates waveform visualizations similar to those found on SoundCloud. 
 
 ## Features
 
-* Support for all audio formats readable by libsndfile
+* **Extensive audio format support:**
+  * Native: WAV, FLAC, OGG, AIFF, AU, CAF, and more via libsndfile
+  * Automatic conversion: MP3, M4A, AAC, WMA, and 100+ formats via ffmpeg (optional)
 * Customizable foreground and background colors with RGBA support
 * Optional logarithmic (decibel) scale
 * Configurable image dimensions
@@ -30,6 +32,7 @@ This fork includes the following modernization updates to Benjamin Schulz's orig
 * **Linux-focused build** - Removed macOS-specific code and Xcode projects to simplify the codebase for Linux server deployments
 * **Simplified binary path** - Changed output from bin/Linux/wav2png to bin/wav2png
 * **Modern tooling** - Added comprehensive .gitignore and CHANGELOG.md
+* **Extended format support** - Automatic ffmpeg integration for MP3, M4A, and 100+ audio formats
 
 All changes maintain complete backward compatibility with the original command-line interface. Full credit for the core waveform algorithms goes to Benjamin Schulz.
 
@@ -41,6 +44,10 @@ Install dependencies:
 
     sudo apt-get update
     sudo apt-get install make g++ libsndfile1-dev libpng++-dev libpng-dev libboost-program-options-dev
+
+For extended format support (MP3, M4A, etc.), also install ffmpeg:
+
+    sudo apt-get install ffmpeg
 
 Build:
 
@@ -152,13 +159,14 @@ Specify minimum and maximum dB values:
 
 ![example8](https://github.com/beschulz/wav2png/raw/master/examples/example8.png)
 
-### MP3 Conversion via Sox
+### MP3 and Other Formats
 
-Convert MP3 files by piping through sox:
+With ffmpeg installed, wav2png automatically handles MP3, M4A, AAC, and other formats:
 
-    sox song.mp3 -c 1 -t wav - | wav2png -o output.png /dev/stdin
+    wav2png song.mp3 -o output.png
+    wav2png podcast.m4a --foreground-color=2e4562ff -o output.png
 
-![example9](https://github.com/beschulz/wav2png/raw/master/examples/example9.png)
+No additional flags needed - conversion happens automatically!
 
 ## Color Format
 

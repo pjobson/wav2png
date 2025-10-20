@@ -50,7 +50,7 @@ $(SRC)/version.hpp: Makefile version.txt
 $(BINARY): $(SRC)/*.cpp $(SRC)/*.hpp $(SRC)/version.hpp
 	@echo "Building wav2png..."
 	@mkdir -p `dirname $(BINARY)`
-	$(CXX) $(CXXFLAGS) $(SRC)/*.cpp $(INCLUDES) $(LD_PLATFORM_FLAGS) -o $(BINARY)
+	$(CXX) $(CXXFLAGS) $(SRC)/main.cpp $(SRC)/wav2png.cpp $(SRC)/audio_converter.cpp $(INCLUDES) $(LD_PLATFORM_FLAGS) -o $(BINARY)
 	@echo "Build complete: $(BINARY)"
 
 clean:
@@ -111,6 +111,9 @@ install_dependencies:
 	@sudo apt-get update -qq
 	@sudo apt-get install -y libsndfile1-dev libpng++-dev libpng-dev libboost-program-options-dev
 	@echo "Dependencies installed"
+	@echo ""
+	@echo "Optional: Install ffmpeg for extended format support (MP3, M4A, etc.):"
+	@echo "  sudo apt-get install -y ffmpeg"
 
 help:
 	@echo "wav2png Makefile targets:"

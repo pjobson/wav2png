@@ -6,6 +6,7 @@
 
 #include "options.hpp"
 #include "wav2png.hpp"
+#include "audio_converter.hpp"
 
 namespace {
 
@@ -21,13 +22,15 @@ int main(int argc, char* argv[]) {
     try {
         const Options options(argc, argv);
 
-        // Open sound file
-        SndfileHandle wav(options.input_file_name.c_str());
+        // Open sound file (with automatic ffmpeg conversion if needed)
+        SndfileHandle wav = AudioConverter::open_audio_file(options.input_file_name);
 
         // Handle error
         if (wav.error()) {
             std::cerr << "Error opening audio file '" << options.input_file_name << "'\n"
                       << "Error was: '" << wav.strError() << "'" << std::endl;
+            std::cerr << "\nSupported formats: WAV, AIFF, FLAC, OGG, AU, CAF, and more via libsndfile" << std::endl;
+            std::cerr << "MP3 and other formats require ffmpeg to be installed" << std::endl;
             return 2;
         }
 
